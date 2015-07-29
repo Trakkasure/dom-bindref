@@ -1,0 +1,27 @@
+<link rel="import" href="../../paper-button/paper-button.html">
+<link rel="import" href="../../paper-input/paper-input.html">
+
+<template id="test1">
+	<h3>I'm #test1 included from "<span>{{includeFile}}</span>" template file</h3>
+	<div>Click Here: <paper-button raised>{{buttonText}}</paper-button></div>
+</template>
+
+<template id="test2">
+	<h3>I'm #test2 included from "<span>{{includeFile}}</span>" template file</h3>
+	<div>Set Button Text on Template 1 Here: <input size="32" type="text" value="{{buttonText::change}}" style="font-size: 14pt;"></input></div>
+</template>
+
+<template id="test3" style="font-size:10pt;">
+  <div>
+	<h3>I'm #test3 included from "<span>{{includeFile}}</span>" template file</h3>
+	<div>This is showing that variables like the button text "<span>{{buttonText}}</span>" can propagate across templates</div>
+  </div>
+</template>
+
+<template id="test4" style="font-size:10pt;">
+  <div>
+	<h3>I'm #test4 included from "<span>{{includeFile}}</span>" template file</h3>
+	<div>This is template is isolated. The button text "<span>{{buttonText}}</span>" won't be propagated if set.</div>
+	<div>Button Text:<input size="32" type="text" value="{{buttonText::change}}" style="font-size: 14pt;"></div>
+  </div>
+</template>

@@ -1,0 +1,183 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<!--
+An element providing referencable content.
+
+Example:
+
+     <template id="howdyTpl">Howdy <span>{{whatever}}</span></template>
+
+     <paper-material elevation="2">
+         <dom-bindref ref="howdyTpl"></dom-bindref>
+     </paper-material>
+
+@demo
+-->
+<dom-module id="dom-bindref"><template></template></dom-module>
+<script>
+
+  /**
+   * Stamps the template by copying content of REF template into this template.
+   * Then attempts to assiciate bindings from parent into this template.
+   *
+   */
+
+Polymer({
+  is: 'dom-bindref',
+
+  properties: {
+    /**
+     * Reference of template ID place
+     *
+     * @param {string} reference id
+     */
+    ref: {
+      type: String,
+      observer: '_refChanged',
+    },
+    /**
+     * If true, does not propagate changes on the referenced template to parent data host.
+     * And as such, any other template under this templates parent data host is then unaffected.
+     *
+     * @param {boolean} isolation
+     */
+    isolation: {
+      type: Boolean,
+      observer: '_isolation',
+      value: false
+    }
+  },
+  behaviors: [
+    Polymer.Templatizer
+  ],
+
+  _refChanged: function() {
+    if (this.ref !== this._oldRef) {
+      this._removeChildren();
+      if (this._isAttached)
+        this._stamp();
+      this._oldRef=this.ref;
+    }
+  },
+  _isolation: function() {
+    if (this.isolation&&this._instance)
+      Object.unobserve(this._instance['__data__'],this._change);
+    else if (this._instance)
+      Object.observe(this._instance['__data__'],this._change);
+  },
+  render:function() {
+    this._flushTemplates();
+  },
+  _stamp: function() {
+    if (!this.ref) return;
+    var tpl = Polymer['bind-ref'].getItem(this.ref);
+    if (!tpl) {
+      this._findRefs(this.ownerDocument);
+      tpl = Polymer['bind-ref'].getItem(this.ref);
+    }
+
+    if (tpl) {
+        if (!this.isolation&&this._instance)
+          Object.unobserve(this._instance['__data__'],this._change.bind(this));
+        this._removeChildren();
+        this.templatize(tpl);
+        this._instance = this.stamp();
+        this._bindingKeys = Object.keys(this._instance._notes.reduce(function(p,o){return Polymer.Base.mixin(p,o.bindings.reduce(function(p,o){p[o.model]=o.index;return p;},{}))},{}));
+        this._bindingKeys.forEach(function(name){
+          this._instance[name]=this.dataHost[name];
+        }.bind(this));
+        if (!this.isolation)
+          Object.observe(this._instance['__data__'],this._change.bind(this));
+        var parent = Polymer.dom(Polymer.dom(this).parentNode);
+        parent.insertBefore(this._instance.root, this);
+    } else console.error("Could not find template %s.",this.ref)
+  },
+  _findRefs:function(doc) {
+    //if (Polymer['bind-ref'].length) return;
+    while(doc) {
+      Array.prototype.slice.call(doc.querySelectorAll('link[rel=import]')).forEach(function(el) {
+        var templates=el.import.querySelectorAll('template[id]:not([is])');
+        for (var i = 0;i<templates.length;i++) {
+          Polymer['bind-ref'].setItem(templates[i].id,templates[i]);
+        }
+        this._findRefs(el.import);
+      }.bind(this));
+      doc = doc.ownerDocument;
+    }
+  },
+  _removeChildren: function() {
+      if (this._instance) {
+        Object.unobserve(this._instance['__data__'],this._change);
+        var c = this._instance._children;
+        if (c) {
+          // use first child parent, for case when dom-if may have been detached
+          var parent = Polymer.dom(Polymer.dom(c[0]).parentNode);
+          c.forEach(function(n) {
+            parent.removeChild(n);
+          });
+        }
+        this._instance = null;
+      }
+  },
+  // Implements extension point from Templatizer mixin
+  // Called as side-effect of a host property change, responsible for
+  // notifying parent.<prop> path change on instance
+  _forwardParentProp: function(prop, value) {
+    if (this._instance) {
+      this._instance[prop] = value;
+    }
+  },
+  // Implements extension point from Templatizer
+  // Called as side-effect of a host path change, responsible for
+  // notifying parent.<path> path change on each row
+  _forwardParentPath: function(path, value) {
+    if (this._instance) {
+      this._instance.notifyPath(path, value, true);
+    }
+  },
+  _change: function(changes) {
+    changes.forEach(function(change){
+      if (this._instance[change.name]===change.oldValue) return
+      this.dataHost.set(change.name,change.object[change.name]);
+    }.bind(this));
+  },
+  _parentChange: function(changes) {
+    changes.forEach(function(change){
+      //console.log("%s parent Change", this.ref,change)
+      if (this.dataHost[change.name]===change.oldValue) return
+      if(this._bindingKeys)
+      if (this._bindingKeys.indexOf(change.name)!==-1) {
+        this._instance.set(change.name,change.object[change.name]);
+      }
+    }.bind(this));
+  },
+  attached: function() {
+    this._isAttached = true;
+    this._stamp();
+    Object.observe(this.dataHost,this._parentChange.bind(this));
+    var host = this.dataHost;
+    // get out of embeded import. There's a better way to do this other than observer.
+    while (host&&Polymer['bind-ref'].getItem(host._template.id)) {
+      host=host.dataHost;
+    }
+    if (!host) console.error("Big error");
+    var data = host;
+    if (host.tagName.toUpperCase() !== 'ARGON-BINDREF')
+      data = host._template;
+    Object.observe(data.__data__,this._parentChange.bind(this));
+  },
+  detached: function() {
+    this._isAttached = false;
+    Object.unobserve(this.dataHost,this._change);
+    Object.unobserve(this.dataHost._template['__data__'],this._change);
+    this._removeChildren();
+  }
+});
+
+/**
+ *
+ *  Stores references to bound templates. Populated upon first reference request.
+ *
+ **/
+Polymer['bind-ref']=new Polymer.Collection([]);
+</script>
