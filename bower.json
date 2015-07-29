@@ -1,0 +1,32 @@
+{
+  "name": "dom-bindref",
+  "version": "0.9.2",
+  "authors": [
+    "Brandon Myers <trakkasure@gmail.com>"
+  ],
+  "description": "An element providing importing of referencable content.",
+  "keywords": [
+    "web-component",
+    "web-components",
+    "polymer",
+    "bind",
+    "template",
+    "reference"
+  ],
+  "main": "index.html",
+  "ignore": [
+    "/.*",
+    "/test/",
+    "/demo/"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#~1.0.1"
+  },
+  "devDependencies": {
+    "iron-component-page": "PolymerElements/iron-component-page#~1.0.4",
+    "paper-radio-button": "PolymerElements/paper-radio-button#~1.0.5",
+    "paper-radio-group": "PolymerElements/paper-radio-group#~1.0.4",
+    "paper-input": "PolymerElements/paper-input#~1.0.6",
+    "web-component-tester": "*"
+  }
+}
