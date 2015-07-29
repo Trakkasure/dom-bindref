@@ -1,8 +1,6 @@
 # Polymer tag for template reference placement.
 
-Simply put, it tries to place content from a template, possibly loaded in a different file, in the place of this tag.
-It then attempts to bind properties from this and the parent template into the variable bindings in that referenced template.
-
+Simply put, it is like the "ref" attribute of the template tag from Polymer 0.5. It tries to place content from a template, possibly loaded in a different file, in the place of this tag.  It then attempts to bind properties from this and the parent template into the variable bindings in that referenced template.
 
 ## Example:
 This is contrived and could be easily be implemented with another variable, but it's a dirt simple example.
