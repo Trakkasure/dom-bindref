@@ -12,36 +12,42 @@
   </head>
   <body>
 
-        <h1>BIND-REF demo</h1>
+      <h1>BIND-REF demo</h1>
+      <template is="dom-bind" id="app">
 
-        <template is="dom-bind" id="app">
-
-            <h2>Choose Template to show above</h2>
-            <paper-radio-group selected="{{selected}}">
+          <h2>Choose Template to show above</h2>
+          <paper-radio-group selected="{{selected}}">
             <template is="dom-repeat" items="{{templates}}">
               <paper-radio-button name="{{item.value}}"><span>{{item.name}}</span></paper-radio-button>
             </template>
+          </paper-radio-group>
+          <div>Propagation value: <span>[[noPropagate]]</span></div>
+          <div>I've included a file called <span>{{includeFile}}</span></div>
+          <div>Now I'm going to place the content below: (Showing template: <span>{{selected}}</span>)
+            <dom-bindref id="reftest1" ref="[[selected]]"></dom-bindref>
+          </div>
 
-            </paper-radio-group>
-            <div>I've included a file called <span>{{includeFile}}</span></div>
-            <div>Now I'm going to place the content below: (Showing template: <span>{{selected}}</span>)
-              <dom-bindref ref="{{selected}}"></dom-bindref>
-            </div>
-
-            <div class="layout horizontal">
-              <dom-bindref ref="test3"></dom-bindref>
-              <dom-bindref ref="test4" isolation="true"></dom-bindref>
-            </div>
+          <div class="layout horizontal">
+            <dom-bindref id="reftest2" ref="test3"></dom-bindref>
+            <dom-bindref id="reftest3" ref="test4" isolation="true"></dom-bindref>
+          </div>
       </template>
+
+      <!-- This should show the template, but not populate any variables from parent. -->
+      <template is="dom-bindref" id="reftest4" ref="test3"></template>
 
     <script>
        window.addEventListener('WebComponentsReady',function() {
             var templates = [{value:'test1',name:'Test 1'},{value:'test2',name:'Test 2'}];
-            var app = document.querySelector('#app');
+            app = document.querySelector('#app');
             app.set('includeFile',"include1");
-            app.set('templates',templates);
-            app.set('selected',templates[0].value);
             app.set('buttonText',"Off");
+            app.set('noPropagate',"Inherited from APP");
+            app.set('selected',templates[0].value);
+            app.set('templates',templates);
+
+            test=document.querySelector('#reftest2');
+            test.async(test.set.bind(test,'noPropagate',"DON'T PROPAGATE!"));
         });
     </script>
   </body>

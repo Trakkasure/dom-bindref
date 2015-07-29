@@ -45,6 +45,10 @@ Polymer({
       type: Boolean,
       observer: '_isolation',
       value: false
+    },
+    _bindingKeys: {
+      type: Object,
+      value: function(){return {};}
     }
   },
   behaviors: [
@@ -62,11 +66,19 @@ Polymer({
   _isolation: function() {
     if (this.isolation&&this._instance)
       Object.unobserve(this._instance['__data__'],this._change);
-    else if (this._instance)
+    else if (this._instance && this._instance.__data__)
       Object.observe(this._instance['__data__'],this._change);
   },
   render:function() {
     this._flushTemplates();
+  },
+  set: function(v,val) {
+    Polymer.Base.set.call(this,v,val);
+    this._instance.set(v,val);
+    this._flushTemplates();
+  },
+  get: function(v) {
+    return this._instance.__data__[v];
   },
   _stamp: function() {
     if (!this.ref) return;
@@ -82,12 +94,18 @@ Polymer({
         this._removeChildren();
         this.templatize(tpl);
         this._instance = this.stamp();
-        this._bindingKeys = Object.keys(this._instance._notes.reduce(function(p,o){return Polymer.Base.mixin(p,o.bindings.reduce(function(p,o){p[o.model]=o.index;return p;},{}))},{}));
-        this._bindingKeys.forEach(function(name){
+        this._bindingKeys = this._instance._notes.reduce(function(p,o){
+          return Polymer.Base.mixin(p,o.bindings.reduce(function(p,o){
+            p[o.model]=o.mode;
+            return p;
+          },{}))
+        },{});
+        if (this.dataHost)
+        Object.keys(this._bindingKeys).forEach(function(name){
           this._instance[name]=this.dataHost[name];
         }.bind(this));
         if (!this.isolation)
-          Object.observe(this._instance['__data__'],this._change.bind(this));
+          Object.observe(this._instance.__data__,this._change.bind(this));
         var parent = Polymer.dom(Polymer.dom(this).parentNode);
         parent.insertBefore(this._instance.root, this);
     } else console.error("Could not find template %s.",this.ref)
@@ -138,15 +156,14 @@ Polymer({
   _change: function(changes) {
     changes.forEach(function(change){
       if (this._instance[change.name]===change.oldValue) return
-      this.dataHost.set(change.name,change.object[change.name]);
+      if (this._bindingKeys[change.name]==="{")
+        this.dataHost.set(change.name,change.object[change.name]);
     }.bind(this));
   },
-  _parentChange: function(changes) {
+  _parentChange: function(ref,changes) {
     changes.forEach(function(change){
-      //console.log("%s parent Change", this.ref,change)
-      if (this.dataHost[change.name]===change.oldValue) return
-      if(this._bindingKeys)
-      if (this._bindingKeys.indexOf(change.name)!==-1) {
+      if (ref[change.name]===change.oldValue) return
+      if (this._bindingKeys[change.name]) {
         this._instance.set(change.name,change.object[change.name]);
       }
     }.bind(this));
@@ -154,21 +171,30 @@ Polymer({
   attached: function() {
     this._isAttached = true;
     this._stamp();
-    Object.observe(this.dataHost,this._parentChange.bind(this));
-    var host = this.dataHost;
-    // get out of embeded import. There's a better way to do this other than observer.
-    while (host&&Polymer['bind-ref'].getItem(host._template.id)) {
-      host=host.dataHost;
+    if (this.dataHost) {
+      var host = this.dataHost;
+
+      Object.observe(host,this._parentChange.bind(this,host));
+      // get out of embeded import. There's a better way to do this other than observer.
+      while (host&&Polymer['bind-ref'].getItem(host._template.id)) {
+        host=host.dataHost;
+      }
+      if (!host) console.error("Big error");
+      this._parentTemplate = host;
+      if (host.tagName.toUpperCase() !== 'DOM-BINDREF')
+        this._parentTemplate = host._template;
+      Object.observe(this._parentTemplate.__data__,this._parentChange.bind(this,this._parentTemplate.__data__));
     }
-    if (!host) console.error("Big error");
-    var data = host;
-    if (host.tagName.toUpperCase() !== 'ARGON-BINDREF')
-      data = host._template;
-    Object.observe(data.__data__,this._parentChange.bind(this));
   },
   detached: function() {
     this._isAttached = false;
-    Object.unobserve(this.dataHost,this._change);
+    // Unobserve changes from this template to the parent.
+    Object.unobserve(this.dataHost,this._parentChange);
+    // If we are not in isolation and we have a template instance, unobserve changes.
+    if (!this.isolation&&this._instance)
+      Object.unobserve(this._instance['__data__'],this._change.bind(this));
+    // Unobserve changes
+    Object.unobserve(this._parentTemplate.__data__,this._parentChange.bind(this));
     Object.unobserve(this.dataHost._template['__data__'],this._change);
     this._removeChildren();
   }
