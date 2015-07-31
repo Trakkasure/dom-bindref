@@ -22,15 +22,16 @@ I've also typed this in without testing.
         </paper-material>
 
         <paper-material elevation="2">
-            <dom-bindref id="myBind" ref="howdyTpl"></dom-bindref>
+            <dom-bindref id="myBind" ref="{{ref}}"></dom-bindref>
         </paper-material>
     </template>
 
 
     <script>
         var app = document.querySelector("#app");
+        app.set('ref','ref1');
         app.changeRef=function() {
-            app.$.myBind.set("ref","ref2");
+            app.set("ref","ref2");
         };
         window.addEventListener('WebComponentsReady',function() {
             app.set('arriving-person',"new guy");
