@@ -11,7 +11,8 @@
     <link rel="import" href="include1.html">
   </head>
   <body>
-
+      <template id="template-bind"><div>Should not be blank: "<span>[[key]]</span>"</div></template>
+      <template id="template-bind2"><div>Should not be blank: "<span>[[item.key]]</span>"</div></template>
       <h1>BIND-REF demo</h1>
       <template is="dom-bind" id="app">
 
@@ -34,7 +35,18 @@
       </template>
 
       <!-- This should show the template, but not populate any variables from parent. -->
-      <template is="dom-bindref" id="reftest4" ref="test3"></template>
+
+      <h2>Test bind outside of any other template (no bind)</h2>
+      <dom-bindref id="reftest4" ref="test3"></dom-bindref>
+
+      <h2>Test bind outside of any other template (with bind)</h2>
+      <dom-bindref ref="template-bind" id="reftest5" bind='{"key":"value"}'></dom-bindref>
+
+      <h2>Test bind inside repeat (with bind) </h2>
+      <template is="dom-repeat" id="repeat">
+        <div>Repeat line <span>[[item.key]]</span></div>
+        <dom-bindref id="[[item.key]]" ref="template-bind" bind$="[[item]]"></dom-bindref>
+      </template>
 
     <script>
        window.addEventListener('WebComponentsReady',function() {
@@ -48,6 +60,7 @@
 
             test=document.querySelector('#reftest2');
             test.async(test.set.bind(test,'noPropagate',"DON'T PROPAGATE!"));
+            document.querySelector('#repeat').set('items',[{key:'value1'},{key:'value2'},{key:'value3'},{key:'value4'}]);
         });
     </script>
   </body>

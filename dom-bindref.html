@@ -52,6 +52,9 @@ Polymer({
       value: function(){return {};}
     }
   },
+  observers: [
+    '_bindChanged(bind.*)'
+  ],
   behaviors: [
     Polymer.Templatizer
   ],
@@ -70,12 +73,21 @@ Polymer({
     else if (this._instance && this._instance.__data__)
       Object.observe(this._instance['__data__'],this._change);
   },
+  created: function() {
+    if (!Polymer['bind-ref'])
+        Polymer['bind-ref']=new Polymer.Collection([]);
+  },
   render:function() {
     this._flushTemplates();
   },
   set: function(v,val) {
     Polymer.Base.set.call(this,v,val);
-    this._instance.set(v,val);
+    if (this._instance)
+      this._instance.set(v,val);
+    else
+      // _instance doesn't exist yet, so populate it when we can.
+      // there must be a better way.
+      this.async(function(){this.set(v,val);});
     this._flushTemplates();
   },
   get: function(v) {
@@ -94,12 +106,12 @@ Polymer({
           Object.unobserve(this._instance['__data__'],this._change.bind(this));
         this._removeChildren();
         this.templatize(tpl);
-        this._instance = this.stamp(this.bind||{});
+        this._instance = this.stamp(this.bind);
         this._bindingKeys = this._instance._notes.reduce(function(p,o){
           return Polymer.Base.mixin(p,o.bindings.reduce(function(p,o){
             p[o.model]=o.mode;
             return p;
-          },{}))
+          },{}));
         },{});
         if (this.dataHost)
         Object.keys(this._bindingKeys).forEach(function(name){
@@ -154,6 +166,11 @@ Polymer({
       this._instance.notifyPath(path, value, true);
     }
   },
+  _bindChanged: function(c) {
+    Object.keys(c.value).forEach(function(key){
+      this.set(key,c.value[key]);
+    }.bind(this));
+  },
   _change: function(changes) {
     changes.forEach(function(change){
       if (this._instance[change.name]===change.oldValue) return
@@ -182,8 +199,11 @@ Polymer({
       }
       if (!host) console.error("Big error");
       this._parentTemplate = host;
-      if (host.tagName.toUpperCase() !== 'DOM-BINDREF')
-        this._parentTemplate = host._template;
+      if (host.constructor.name === 'TemplateInstance')
+        this._parentTemplate = host;
+      else
+        if (host.tagName.toUpperCase() !== 'DOM-BINDREF')
+          this._parentTemplate = host._template;
       Object.observe(this._parentTemplate.__data__,this._parentChange.bind(this,this._parentTemplate.__data__));
     }
   },
@@ -201,10 +221,4 @@ Polymer({
   }
 });
 
-/**
- *
- *  Stores references to bound templates. Populated upon first reference request.
- *
- **/
-Polymer['bind-ref']=new Polymer.Collection([]);
 </script>
