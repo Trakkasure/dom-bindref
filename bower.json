@@ -4,7 +4,7 @@
   "authors": [
     "Brandon Myers <trakkasure@gmail.com>"
   ],
-  "description": "An element providing importing of referencable content.",
+  "description": "An element providing referencing of imported content.",
   "keywords": [
     "web-component",
     "web-components",
