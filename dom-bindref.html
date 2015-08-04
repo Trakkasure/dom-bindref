@@ -114,14 +114,12 @@ Polymer({
   _findRefs:function(doc) {
     //if (Polymer['bind-ref'].length) return;
     while(doc) {
+      var templates=doc.querySelectorAll('template[id]:not([is])');
+      for (var i = 0;i<templates.length;i++) {
+        Polymer['bind-ref'].setItem(templates[i].id,templates[i]);
+      }
       Array.prototype.slice.call(doc.querySelectorAll('link[rel=import]')).forEach(function(el) {
-        var templates=el.import
-        if (!templates) return;
-        templates=templates.querySelectorAll('template[id]:not([is])');
-        for (var i = 0;i<templates.length;i++) {
-          Polymer['bind-ref'].setItem(templates[i].id,templates[i]);
-        }
-        this._findRefs(el.import);
+        if (el.import) this._findRefs(el.import);
       }.bind(this));
       doc = doc.ownerDocument;
     }
