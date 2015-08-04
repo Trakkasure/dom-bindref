@@ -115,7 +115,9 @@ Polymer({
     //if (Polymer['bind-ref'].length) return;
     while(doc) {
       Array.prototype.slice.call(doc.querySelectorAll('link[rel=import]')).forEach(function(el) {
-        var templates=el.import.querySelectorAll('template[id]:not([is])');
+        var templates=el.import
+        if (!templates) return;
+        templates=templates.querySelectorAll('template[id]:not([is])');
         for (var i = 0;i<templates.length;i++) {
           Polymer['bind-ref'].setItem(templates[i].id,templates[i]);
         }
