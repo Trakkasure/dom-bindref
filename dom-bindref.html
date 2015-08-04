@@ -46,6 +46,7 @@ Polymer({
       observer: '_isolation',
       value: false
     },
+    bind: Object,
     _bindingKeys: {
       type: Object,
       value: function(){return {};}
@@ -93,7 +94,7 @@ Polymer({
           Object.unobserve(this._instance['__data__'],this._change.bind(this));
         this._removeChildren();
         this.templatize(tpl);
-        this._instance = this.stamp();
+        this._instance = this.stamp(this.bind||{});
         this._bindingKeys = this._instance._notes.reduce(function(p,o){
           return Polymer.Base.mixin(p,o.bindings.reduce(function(p,o){
             p[o.model]=o.mode;
