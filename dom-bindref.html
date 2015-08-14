@@ -120,9 +120,9 @@ Polymer({
                 return p;
               }.bind(this),{}));
             } else p[o.value]=o;
+            if (o.model && !p[o.model]) p[o.model]={mode:'[',model:o.model,name:o.model,value:o.model};
             return p;
           }.bind(this),{}));
-          return p;
         }.bind(this),{});
         if (this.dataHost) {
           Object.keys(this._bindingKeys).forEach(this._setBindings.bind(this));
@@ -131,7 +131,7 @@ Polymer({
           Object.observe(this._instance.__data__,this._change.bind(this));
         var parent = Polymer.dom(Polymer.dom(this).parentNode);
         parent.insertBefore(this._instance.root, this);
-    } else console.error("Could not find template %s.",this.ref)
+    } else console.error("Could not find template %s.",this.ref);
   },
   _getIndexPath: function(n) {
       if (n.parent.index) return this._getIndexPath(n.parent)+"."+n.index;
@@ -171,7 +171,7 @@ Polymer({
   },
   _removeChildren: function() {
       if (this._instance) {
-        Object.unobserve(this._instance['__data__'],this._change);
+        Object.unobserve(this._instance.__data__,this._change);
         var c = this._instance._children;
         if (c) {
           // use first child parent, for case when dom-if may have been detached
@@ -269,10 +269,10 @@ Polymer({
     Object.unobserve(this.dataHost,this._parentChange);
     // If we are not in isolation and we have a template instance, unobserve changes.
     if (!this.isolation&&this._instance)
-      Object.unobserve(this._instance['__data__'],this._change.bind(this));
+      Object.unobserve(this._instance.__data__,this._change.bind(this));
     // Unobserve changes
     Object.unobserve(this._parentTemplate.__data__,this._parentChange.bind(this));
-    Object.unobserve(this.dataHost._template['__data__'],this._change);
+    Object.unobserve(this.dataHost._template.__data__,this._change);
     this._removeChildren();
   }
 });
