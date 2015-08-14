@@ -1,5 +1,6 @@
 <link rel="import" href="../polymer/polymer.html">
-
+<!-- To make other browsers than chrome work. -->
+<script src="../object.observe/dist/object-observe-lite.min.js"></script>
 <!--
 An element providing referencable content.
 
@@ -15,7 +16,6 @@ Example:
 -->
 <dom-module id="dom-bindref"><template></template></dom-module>
 <script>
-
   /**
    * Stamps the template by copying content of REF template into this template.
    * Then attempts to assiciate bindings from parent into this template.
@@ -107,21 +107,54 @@ Polymer({
         this._removeChildren();
         this.templatize(tpl);
         this._instance = this.stamp(this.bind);
+        this._calculated = {};
         this._bindingKeys = this._instance._notes.reduce(function(p,o){
+          var index = this._getIndexPath(o);
           return Polymer.Base.mixin(p,o.bindings.reduce(function(p,o){
-            p[o.model]=o.mode;
+            if(o.signature) {
+              Polymer.Base.mixin(p,o.signature.args.reduce(function(p,ob){
+                if (!this._calculated[ob.name]) this._calculated[ob.name]=[];
+                this._calculated[ob.name].push(o);
+                p[ob.name]=o;
+                o.index=index;
+                return p;
+              }.bind(this),{}));
+            } else p[o.value]=o;
             return p;
-          },{}));
-        },{});
-        if (this.dataHost)
-        Object.keys(this._bindingKeys).forEach(function(name){
-          this._instance[name]=this.dataHost[name];
-        }.bind(this));
+          }.bind(this),{}));
+          return p;
+        }.bind(this),{});
+        if (this.dataHost) {
+          Object.keys(this._bindingKeys).forEach(this._setBindings.bind(this));
+        }
         if (!this.isolation)
           Object.observe(this._instance.__data__,this._change.bind(this));
         var parent = Polymer.dom(Polymer.dom(this).parentNode);
         parent.insertBefore(this._instance.root, this);
     } else console.error("Could not find template %s.",this.ref)
+  },
+  _getIndexPath: function(n) {
+      if (n.parent.index) return this._getIndexPath(n.parent)+"."+n.index;
+      return n.index;
+  },
+  _setBindings:function(name) {
+    var path = name.split('.');
+    if (path.length) {
+      var current = "";
+      do {
+        current+=path.shift();
+        var dhv = this.dataHost.get(current);
+        if (typeof dhv !== typeof(undefined)) {
+          if (Array.isArray(dhv))
+            this._instance.set(current,[]); // set empty array to target
+          else if (typeof dhv == typeof({}))
+            this._instance.set(current,{}); // set empty object to target
+          else
+            this._instance.set(current,dhv); // set string result to target
+        } else path = []; // dataHost's value is undefined.
+        current+='.';
+      } while (path.length);
+    } else this._instance.set(name,this.dataHost.get(name));
   },
   _findRefs:function(doc) {
     //if (Polymer['bind-ref'].length) return;
@@ -166,6 +199,7 @@ Polymer({
       this._instance.notifyPath(path, value, true);
     }
   },
+  // Bind variable had a change... update local object.
   _bindChanged: function(c) {
     Object.keys(c.value).forEach(function(key){
       this.set(key,c.value[key]);
@@ -173,16 +207,38 @@ Polymer({
   },
   _change: function(changes) {
     changes.forEach(function(change){
-      if (this._instance[change.name]===change.oldValue) return
-      if (this._bindingKeys[change.name]==="{")
+      if (this._instance[change.name]===change.oldValue) return;
+        //console.log("Change %s - %s: %s/%s",this.id,change.name,change.oldValue,this._instance[change.name]);
+      if (this._calculated[change.name]) {
+        var cache={};
+        this._calculated[change.name].forEach(function(c){
+          //console.log("Call _calculated function ",c);
+          if (!cache[c.value])
+            cache[c.value]=(this[c.signature.method]||this.dataHost[c.signature.method]).apply(this,c.signature.args.map(function(a){return this.get(a.name)||this.dataHost.get(a.name); }.bind(this)));
+          var path = c.index.split('.');
+          var n = this._instance._children[path.shift()]; // first child
+          n = path.reduce(function(p,c){
+            return Polymer.dom(p).childNodes[c];
+          },n);
+          if (n.nodeType === n.TEXT_NODE)
+            n.data = cache[c.value];
+          else
+            n.set(c.name,cache[c.value]);
+        }.bind(this));
+      }
+      if (this._bindingKeys[change.name].mode==="{")
         this.dataHost.set(change.name,change.object[change.name]);
     }.bind(this));
   },
   _parentChange: function(ref,changes) {
     changes.forEach(function(change){
-      if (ref[change.name]===change.oldValue) return
+      if (ref[change.name]===change.oldValue) return;
+        //console.log("Parent change %s - %s: %s/%s",this.id,change.name,change.oldValue,ref[change.name]);
       if (this._bindingKeys[change.name]) {
         this._instance.set(change.name,change.object[change.name]);
+        if (this._calculated[change.name]) {
+          console.log("Call _calculated function(s) ",this._calculated[change.name]);
+        }
       }
     }.bind(this));
   },
