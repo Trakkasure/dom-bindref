@@ -76,6 +76,7 @@ Polymer({
   created: function() {
     if (!Polymer['bind-ref'])
         Polymer['bind-ref']=new Polymer.Collection([]);
+    if (!this._parentProps) this._parentProps=[];
   },
   render:function() {
     this._flushTemplates();
@@ -125,7 +126,7 @@ Polymer({
           }.bind(this),{}));
         }.bind(this),{});
         if (this.dataHost) {
-          Object.keys(this._bindingKeys).forEach(this._setBindings.bind(this));
+          //Object.keys(this._bindingKeys).forEach(this._setBindings.bind(this));
         }
         if (!this.isolation)
           Object.observe(this._instance.__data__,this._change.bind(this));
@@ -199,8 +200,14 @@ Polymer({
       this._instance.notifyPath(path, value, true);
     }
   },
+  _forwardInstancePath: function (inst, path, value) {
+  },
+  _forwardInstanceProp: function (inst, prop, value) {
+  },
   // Bind variable had a change... update local object.
   _bindChanged: function(c) {
+    if (!c.value) this.set(c.path,c.value);
+    else
     Object.keys(c.value).forEach(function(key){
       this.set(key,c.value[key]);
     }.bind(this));
@@ -215,11 +222,16 @@ Polymer({
           //console.log("Call _calculated function ",c);
           if (!cache[c.value])
             cache[c.value]=(this[c.signature.method]||this.dataHost[c.signature.method]).apply(this,c.signature.args.map(function(a){return this.get(a.name)||this.dataHost.get(a.name); }.bind(this)));
-          var path = c.index.split('.');
-          var n = this._instance._children[path.shift()]; // first child
-          n = path.reduce(function(p,c){
-            return Polymer.dom(p).childNodes[c];
-          },n);
+          var n,path;
+          if (typeof c.index === typeof 0)
+            n = this._instance._children[c.index]; // target node
+          else {
+            path = c.index.split('.');
+            n = this._instance._children[path.shift()]; // first child
+            n = path.reduce(function(p,c){
+              return Polymer.dom(p).childNodes[c];
+            },n);
+          }
           if (n.nodeType === n.TEXT_NODE)
             n.data = cache[c.value];
           else
