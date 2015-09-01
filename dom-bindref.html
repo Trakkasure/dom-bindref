@@ -221,7 +221,18 @@ Polymer({
         this._calculated[change.name].forEach(function(c){
           //console.log("Call _calculated function ",c);
           if (!cache[c.value])
-            cache[c.value]=(this[c.signature.method]||this.dataHost[c.signature.method]).apply(this,c.signature.args.map(function(a){return this.get(a.name)||this.dataHost.get(a.name); }.bind(this)));
+            cache[c.value]=(this[c.signature.method]||this.dataHost[c.signature.method]).apply(this,
+              c.signature.args.map(
+                function(a){
+                  var v = this.get(a.name)||this.dataHost.get(a.name);
+                  if (v === undefined) {
+                    v=a.name.match(t);
+                    // is a string.
+                    if (v) return v.pop();
+                    // Is a number.
+                    if (a.name*1===a.name) return a.name;
+                  } else return v;
+                }.bind(this)));
           var n,path;
           if (typeof c.index === typeof 0)
             n = this._instance._children[c.index]; // target node
